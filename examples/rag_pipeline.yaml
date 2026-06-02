@@ -1,0 +1,46 @@
+name: "Customer Support RAG Chatbot"
+description: >
+  Customer-facing chatbot that answers support questions using RAG over internal
+  documentation. Includes tool use for ticket creation and account lookup.
+  Deployed as a web widget on the public company website. Users are unauthenticated.
+
+components:
+  - name: "Web Widget (React)"
+    type: "frontend"
+  - name: "API Gateway (AWS)"
+    type: "ingress"
+  - name: "Orchestration Layer (LangChain)"
+    type: "application"
+  - name: "Foundation Model (Claude claude-sonnet-4-6)"
+    type: "foundation_model"
+    provider: "Anthropic API (external cloud)"
+  - name: "Embedding Model (text-embedding-3-small)"
+    type: "embedding_model"
+    provider: "OpenAI API (external cloud)"
+  - name: "Vector Store (Pinecone)"
+    type: "external_service"
+  - name: "Document Corpus (Confluence)"
+    type: "data_store"
+  - name: "Tool: Create Support Ticket (Zendesk API)"
+    type: "external_api"
+  - name: "Tool: Account Lookup (internal CRM)"
+    type: "internal_api"
+
+data_flows:
+  - "Unauthenticated user → Web Widget → API Gateway"
+  - "API Gateway → Orchestration Layer"
+  - "Orchestration Layer → Foundation Model (user message + system prompt + retrieved context)"
+  - "Orchestration Layer → Embedding Model (user query for similarity search)"
+  - "Orchestration Layer → Vector Store (ANN query for top-k chunks)"
+  - "Vector Store → Orchestration Layer (retrieved document chunks)"
+  - "Foundation Model → Tool: Create Support Ticket (Zendesk) via tool call"
+  - "Foundation Model → Tool: Account Lookup (CRM) via tool call"
+  - "Orchestration Layer → Web Widget (model response)"
+
+trust_boundaries:
+  - "Public internet (unauthenticated web users — zero implicit trust)"
+  - "Anthropic cloud (external LLM API — system prompt transmitted)"
+  - "OpenAI cloud (external embedding API)"
+  - "Pinecone cloud (external vector DB — stores chunked internal docs)"
+  - "Zendesk cloud (external ticketing system — creates real tickets)"
+  - "Internal network (CRM account data, Confluence source docs)"

@@ -1,0 +1,49 @@
+name: "Autonomous Security Alert Triage Agent"
+description: >
+  Agentic AI system that autonomously triages incoming security alerts from SIEM,
+  enriches them with threat intelligence, and takes automated remediation actions
+  (quarantine hosts, block IPs, create incidents) based on a confidence threshold.
+  Uses a multi-agent architecture: a supervisor LLM coordinates specialist sub-agents.
+  Human review required only for actions below confidence threshold.
+
+components:
+  - name: "SIEM (Splunk) — alert source"
+    type: "data_source"
+  - name: "Supervisor Agent (Claude Opus)"
+    type: "foundation_model"
+    provider: "Anthropic API"
+  - name: "Threat Intel Sub-Agent (GPT-4)"
+    type: "foundation_model"
+    provider: "OpenAI API"
+  - name: "Forensics Sub-Agent (Claude claude-sonnet-4-6)"
+    type: "foundation_model"
+    provider: "Anthropic API"
+  - name: "Agent Memory / Task State (Redis)"
+    type: "data_store"
+  - name: "Tool: VirusTotal API (IOC enrichment)"
+    type: "external_api"
+  - name: "Tool: CrowdStrike EDR (quarantine / isolate host)"
+    type: "internal_api"
+  - name: "Tool: Palo Alto Firewall (block IP / domain)"
+    type: "internal_api"
+  - name: "Tool: ServiceNow ITSM (create incident)"
+    type: "internal_api"
+  - name: "Human Review Queue (Slack / SOAR)"
+    type: "human_in_the_loop"
+
+data_flows:
+  - "Splunk SIEM → Supervisor Agent (alert JSON + 30-day host context)"
+  - "Supervisor Agent → Threat Intel Sub-Agent (IOC enrichment task)"
+  - "Supervisor Agent → Forensics Sub-Agent (log analysis task)"
+  - "Sub-Agents → VirusTotal API (file hash / IP / domain lookup)"
+  - "Sub-Agents → Redis (read/write task state and prior decisions)"
+  - "Supervisor Agent → CrowdStrike EDR (quarantine host — automated if confidence ≥0.85)"
+  - "Supervisor Agent → Palo Alto Firewall (block IP — automated if confidence ≥0.85)"
+  - "Supervisor Agent → ServiceNow ITSM (create incident — always automated)"
+  - "Supervisor Agent → Human Review Queue (any action with confidence <0.85)"
+
+trust_boundaries:
+  - "External internet (VirusTotal — external threat intel)"
+  - "Production network (EDR + Firewall — high blast radius automated actions)"
+  - "Internal corporate network (SIEM, ITSM, Redis)"
+  - "External AI clouds (Anthropic API, OpenAI API — sensitive alert data transmitted)"
