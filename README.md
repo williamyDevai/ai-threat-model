@@ -12,6 +12,8 @@ AI systems introduce attack surfaces that traditional threat modeling misses: pr
 
 ---
 
+> 🟢 **New to this / not a developer?** Read **[HOW-TO-RUN.md](HOW-TO-RUN.md)** — dead-simple, copy-paste instructions.
+
 ## Quick Start
 
 ```bash
